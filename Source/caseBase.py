@@ -9,9 +9,9 @@ class CaseBase:
         # Preprocess of the data to be stored in the Case Base
         n_clusters = 5
         self.prep = Preprocess()
-        self.attr_names, self.attr_values, self.attr_types = self.prep.extract_attr_info(x)
+        self.attr_names, self.attr_vals, self.attr_types = self.prep.extract_attr_info(x)
         x = x.values
-        aux_x, attr_values = self.prep.fit_predict(x, n_clusters=n_clusters)  # Auxiliary X with the preprocessed data
+        aux_x, self.attr_vals = self.prep.fit_predict(x, n_clusters=n_clusters)  # Auxiliary X with the preprocessed data
 
         self.tree = None
         self.feat_selected = np.zeros((x.shape[1], 1))  # Depth at which each feature is selected
