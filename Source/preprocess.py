@@ -13,7 +13,7 @@ class Preprocess:
     def extract_attr_info(self, data, num_class):
         # Extract the column names of the attributes
         self.attr_names = data.columns.values.tolist()[:-num_class]
-        #self.attr_names.remove('class')
+        # self.attr_names.remove('class')
 
         # For each column extract the possible values
         for attr_ix in range(len(self.attr_names)):

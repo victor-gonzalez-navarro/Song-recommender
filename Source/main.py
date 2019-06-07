@@ -19,9 +19,15 @@ def main():
     # new_case = [6.9, 3.1, 5.1]  # stops enf and different class
     # ----------------------------------------------------------
 
+    # R1: RETRIEVE ****
     retrieved_cases = cb.retrieve(new_case)
-    updated_solution = cb.update(retrieved_cases, ['num_continuous', 'categorical'])
+
+    # R2: REUSE ****
+    solution = cb.update(retrieved_cases, ['num_continuous', 'categorical'])
+
     cb.print_tree()
+
+    print('Process finished successfully')
 
 
 main()
