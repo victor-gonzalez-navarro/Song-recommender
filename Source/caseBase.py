@@ -13,13 +13,12 @@ class CaseBase:
         self.attr_names, self.attr_vals, self.attr_types = self.prep.extract_attr_info(x, self.num_class)
         self.x = x.values
         aux_x, self.attr_vals = self.prep.fit_predict(self.x[:, :-self.num_class], n_clusters=n_clusters)  # Auxiliary X with the
-        # preprocessed
-        #  data
+                                                                                                           # preprocessed data
 
         self.tree = None
         self.feat_selected = np.zeros((self.x.shape[1], 1))  # Depth at which each feature is selected
-        self.max_depth = aux_x.shape[1]                      # Maximum depth corresponds to the number of attributes (+
-        # leaf)
+        self.max_depth = aux_x.shape[1]                      # Maximum depth corresponds to the number of attributes
+                                                             # (+ leaf)
 
         self.make_tree(self.x, aux_x)
 
@@ -115,3 +114,95 @@ class CaseBase:
             else:
                 print('\t\t\t\t|' * tree.depth + '\u2919\033[92m' + str(branch) + '\033[0m\u291a\u27f6case_\033[94m' +
                       'No cases yet' + '\033[0m')
+
+    # It follows the best path, and in case it arrives to a point with no more instance it returns the instances
+    # included by the parent
+    def retrieve(self, new_case):
+        object = self.tree
+        feat = object.attribute
+        instances_ant = []
+        while (object.is_leaf != True) and (len(object.case_ids) > 0):
+            distances = self.compute_distances(new_case[feat], self.prep.models[feat].cluster_centers_, feat)
+            featvals = np.argsort(distances[:, 0])
+            instances_ant = object.case_ids
+            object = object.children[featvals[0]]
+            feat = object.attribute
+        if len(object.case_ids) > 0:
+            return self.x[object.case_ids,:]
+        else:
+            return self.x[instances_ant,:]
+
+    # PARTIAL MATCHING
+    def retrieve_v2(self, new_case):
+        retrieved_cases = np.empty((0, len(new_case)+self.num_class))
+        object = self.tree
+        feat = object.attribute
+        instances_ant = []
+        while (object.is_leaf != True) and (len(object.case_ids) > 0):
+            distances = self.compute_distances(new_case[feat], self.prep.models[feat].cluster_centers_, feat)
+            featvals = np.argsort(distances[:, 0])
+            # Retrieve instances second best and then following the best path
+            retr = object.children[featvals[1]].retrieve_best(new_case, self.prep.models, self.x, self.attr_types)
+            retrieved_cases = np.append(retrieved_cases, retr, axis=0)
+            instances_ant = object.case_ids
+            object = object.children[featvals[0]]
+            feat = object.attribute
+        if len(object.case_ids) > 0:
+            return np.concatenate((self.x[object.case_ids,:], retrieved_cases), axis=0)
+        else:
+            return np.concatenate((self.x[instances_ant,:], retrieved_cases), axis=0)
+
+    def update(self, retrieved_cases, sol_types):
+        solution = []
+        # We stop in a leaf that has depth smaller the number of attributes
+        if retrieved_cases.shape[0] == 0:
+            dict = {}
+            dict['leaf'] = False
+            dict['num_inst'] = retrieved_cases.shape[0]
+            for i in range(self.num_class):
+                if sol_types[i] == 'num_continuous':
+                    dict['min'] = np.min(retrieved_cases[:, -self.num_class + i])
+                    dict['mean'] = np.mean(retrieved_cases[:, -self.num_class + i])
+                    dict['max'] = np.max(retrieved_cases[:, -self.num_class + i])
+                    solution.append(dict)
+                elif sol_types[i] == 'categorical':
+                    unique_vals, counts = np.unique(retrieved_cases[:, -self.num_class + i], return_counts=True)
+                    if len(counts) > 1:
+                        dict['2Pop'] = unique_vals[1]
+                    else:
+                        dict['2Pop'] = 'None'
+                    dict['1Pop'] = unique_vals[0]
+                    solution.append(dict)
+        # We stop in a leaf that has depth equal to the number of attributes
+        else:
+            for i in range(self.num_class):
+                dict = {}
+                dict['leaf'] = True
+                dict['num_inst'] = retrieved_cases[:, -self.num_class + i].shape[0]
+                if sol_types[i] == 'num_continuous':
+                    dict['min'] = np.min(retrieved_cases[:, -self.num_class + i])
+                    dict['mean'] = np.mean(retrieved_cases[:, -self.num_class + i])
+                    dict['max'] = np.max(retrieved_cases[:, -self.num_class + i])
+                    solution.append(dict)
+                elif sol_types[i] == 'categorical':
+                    unique_vals, counts = np.unique(retrieved_cases[:, -self.num_class + i], return_counts=True)
+                    if len(counts) > 1:
+                        dict['2Pop'] = unique_vals[1]
+                    else:
+                        dict['2Pop'] = 'None'
+                    dict['1Pop'] = unique_vals[0]
+                    solution.append(dict)
+        return solution
+
+    def compute_distances(self, inst1, inst2, feat):
+        distances = []
+        if self.attr_types[feat] == 'num_continuous':
+            for i in range(inst2.shape[0]):
+                distances.append(np.abs(inst1 - inst2[i,0]))
+        elif self.attr_types[feat] == 'categorical':
+            for i in range(inst2.shape[0]):
+                if inst1 == inst2[i]:
+                    distances[i] = 0
+                else:
+                    distances[i] = 5
+        return np.array(distances).reshape((len(distances),1))
