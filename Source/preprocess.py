@@ -10,9 +10,9 @@ class Preprocess:
         self.attr_types = {}
         self.models = None
 
-    def extract_attr_info(self, data):
+    def extract_attr_info(self, data, num_class):
         # Extract the column names of the attributes
-        self.attr_names = data.columns.values.tolist()
+        self.attr_names = data.columns.values.tolist()[:-num_class]
         # self.attr_names.remove('class')
 
         # For each column extract the possible values

@@ -8,19 +8,24 @@ class CaseBase:
     def __init__(self, x):
         # Preprocess of the data to be stored in the Case Base
         n_clusters = 5
+        self.num_class = 2
         self.prep = Preprocess()
-        self.attr_names, self.attr_vals, self.attr_types = self.prep.extract_attr_info(x)
-        x = x.values
-        aux_x, self.attr_vals = self.prep.fit_predict(x, n_clusters=n_clusters)  # Auxiliary X with the preprocessed data
+        self.attr_names, self.attr_vals, self.attr_types = self.prep.extract_attr_info(x, self.num_class)
+        self.x = x.values
+        aux_x, self.attr_vals = self.prep.fit_predict(self.x[:, :-self.num_class], n_clusters=n_clusters)  # Auxiliary X with the
+        # preprocessed
+        #  data
 
         self.tree = None
-        self.feat_selected = np.zeros((x.shape[1], 1))  # Depth at which each feature is selected
-        self.max_depth = x.shape[1]                     # Maximum depth corresponds to the number of attributes (+ leaf)
+        self.feat_selected = np.zeros((self.x.shape[1], 1))  # Depth at which each feature is selected
+        self.max_depth = aux_x.shape[1]                      # Maximum depth corresponds to the number of attributes (+
+        # leaf)
 
-        self.make_tree(x, aux_x)
+        self.make_tree(self.x, aux_x)
 
     def make_tree(self, x, x_aux):
-        self.tree = self.find_best_partition(x_aux, avail_attrs=list(range(x.shape[1])), depth=0)
+        self.tree = self.find_best_partition(x_aux, avail_attrs=list(range(x_aux.shape[1])), depth=0)
+        self.tree.set_cases(list(range(x_aux.shape[0])))
         self.expand_tree(self.tree, x, x_aux, depth=1)
 
     def find_best_partition(self, x, avail_attrs, depth):
@@ -58,16 +63,18 @@ class CaseBase:
 
     def expand_tree(self, tree, x, x_aux, depth):
         for key, val in tree.children.items():
+            prev_val = np.copy(val)
             if len(val) == 0:
                 # If the split left this branch empty, set the terminal boolean to True without adding any case
                 tree.children[key] = Node(is_leaf=True, depth=depth)
             elif depth == self.max_depth:
                 # If the maximum depth has been reached, add the terminal cases in the leaf node
-                terminal_cases = x[val, :].tolist()
-                tree.children[key] = Node(terminal_cases=terminal_cases, is_leaf=True, depth=depth)
+                terminal_cases = np.array(tree.case_ids)[prev_val].tolist()  # x[val, :].tolist()
+                tree.children[key] = Node(case_ids=terminal_cases, is_leaf=True, depth=depth)
             else:
                 # Otherwise, find the best partition for this leaf and expand the subtree
                 tree.children[key] = self.find_best_partition(x_aux[val, :], tree.avail_attrs, depth)
+                tree.children[key].set_cases(np.array(tree.case_ids)[prev_val].tolist())
                 self.expand_tree(tree.children[key], x[val, :], x_aux[val, :], depth + 1)
 
         return
@@ -90,21 +97,21 @@ class CaseBase:
 
     def print_tree_aux(self, branch, tree):
         if not tree.is_leaf:
-            print('\t\t\t\t|' * tree.depth + '\u2919\033[92m' + str(branch) + '\033[0m\u291a\u27f6\tattr_\033[1m' +
+            print('\t\t\t\t|' * tree.depth + '\u2919\033[92m' + str(branch) + '\033[0m\u291a\u27f6attr_\033[1m' +
                   str(self.attr_names[tree.attribute]) + '\033[0m')
             for branch, child_tree in tree.children.items():
                 self.print_tree_aux(branch, child_tree)
         else:
-            if tree.terminal_cases:
+            if tree.case_ids:
                 first = True
-                for case in tree.terminal_cases:
+                for case in tree.case_ids:
                     if first:
                         print('\t\t\t\t|' * tree.depth + '\u2919\033[92m' + str(branch) +
-                              '\033[0m\u291a\u27f6\tcase_\033[94m' + str(case) + '\033[0m')
+                              '\033[0m\u291a\u27f6\tcase_\033[94m' + str(self.x[case, :]) + '\033[0m')
                         first = False
                     else:
                         print('\t\t\t\t|' * tree.depth + '\u2919\033[92m' + ' ' * len(str(branch)) +
-                              '\033[0m\u291a\u27f6\tcase_\033[94m' + str(case) + '\033[0m')
+                              '\033[0m\u291a\u27f6\tcase_\033[94m' + str(self.x[case, :]) + '\033[0m')
             else:
-                print('\t\t\t\t|' * tree.depth + '\u2919\033[92m' + str(branch) + '\033[0m\u291a\u27f6\tcase_\033[94m' +
+                print('\t\t\t\t|' * tree.depth + '\u2919\033[92m' + str(branch) + '\033[0m\u291a\u27f6case_\033[94m' +
                       'No cases yet' + '\033[0m')
