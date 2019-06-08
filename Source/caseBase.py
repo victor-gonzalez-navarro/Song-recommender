@@ -123,7 +123,6 @@ class CaseBase:
         feat = object.attribute
         instances_ant = []
         while (object.is_leaf != True) and (len(object.case_ids) > 0):
-            #distances = np.abs(new_case[feat] - self.prep.models[feat].cluster_centers_)
             distances = self.compute_distances(new_case[feat], self.prep.models[feat].cluster_centers_, feat)
             featvals = np.argsort(distances[:, 0])
             instances_ant = object.case_ids
@@ -134,6 +133,25 @@ class CaseBase:
         else:
             return self.x[instances_ant,:]
 
+    # PARTIAL MATCHING
+    def retrieve_v2(self, new_case):
+        retrieved_cases = np.empty((0, len(new_case)+self.num_class))
+        object = self.tree
+        feat = object.attribute
+        instances_ant = []
+        while (object.is_leaf != True) and (len(object.case_ids) > 0):
+            distances = self.compute_distances(new_case[feat], self.prep.models[feat].cluster_centers_, feat)
+            featvals = np.argsort(distances[:, 0])
+            # Retrieve instances second best and then following the best path
+            retr = object.children[featvals[1]].retrieve_best(new_case, self.prep.models, self.x, self.attr_types)
+            retrieved_cases = np.append(retrieved_cases, retr, axis=0)
+            instances_ant = object.case_ids
+            object = object.children[featvals[0]]
+            feat = object.attribute
+        if len(object.case_ids) > 0:
+            return np.concatenate((self.x[object.case_ids,:], retrieved_cases), axis=0)
+        else:
+            return np.concatenate((self.x[instances_ant,:], retrieved_cases), axis=0)
 
     def update(self, retrieved_cases, sol_types):
         solution = []

@@ -20,10 +20,14 @@ def main():
     # ----------------------------------------------------------
 
     # R1: RETRIEVE ****
-    retrieved_cases = cb.retrieve(new_case)
+    retrieved_cases = cb.retrieve_v2(new_case)
 
     # R2: REUSE ****
     solution = cb.update(retrieved_cases, ['num_continuous', 'categorical'])
+
+    # R3: REVISE ****
+
+    # R4: RETAIN ****
 
     cb.print_tree()
 

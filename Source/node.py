@@ -35,3 +35,32 @@ class Node:
                 out.update(set(val))
 
         return list(out)
+
+    def retrieve_best(self, new_case, models, data, attr_types):
+        object = self
+        feat = object.attribute
+        instances_ant = []
+        while (object.is_leaf != True) and (len(object.case_ids) > 0):
+            distances = self.compute_dist(new_case[feat], models[feat].cluster_centers_, feat, attr_types)
+            featvals = np.argsort(distances[:, 0])
+            instances_ant = object.case_ids
+            object = object.children[featvals[0]]
+            feat = object.attribute
+        if len(object.case_ids) > 0:
+            return data[object.case_ids,:]
+        else:
+            return data[instances_ant,:]
+
+    def compute_dist(self, inst1, inst2, feat, attr_types):
+        distances = []
+        if attr_types[feat] == 'num_continuous':
+            for i in range(inst2.shape[0]):
+                distances.append(np.abs(inst1 - inst2[i,0]))
+        elif attr_types[feat] == 'categorical':
+            for i in range(inst2.shape[0]):
+                if inst1 == inst2[i]:
+                    distances[i] = 0
+                else:
+                    distances[i] = 5
+        return np.array(distances).reshape((len(distances),1))
+
