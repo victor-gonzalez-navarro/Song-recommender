@@ -4,32 +4,35 @@ from Source.caseBase import CaseBase
 
 
 def main():
+    # HYPERPARAMETERS---------------------------------------------------------------------------------------------------
+    new_case = [37, 'Male', "Blues,Instrumental-Classical,Rock", 'some concentration', 'happy', 'calm','I keep the same', 'I keep the same']
+    num_attrib_solution = 7
+    type_attrib_solution = ['num_continuous']*num_attrib_solution
+    attr_categ = 2  # force attribute 2 to be categorical
+    # ------------------------------------------------------------------------------------------------------------------
+
     path = '../Data/'
-    dataset = 'iris.csv'
+    dataset = 'songs.csv'
 
     # For testing purposes, set seed of numpy (used by sklearn as well)
     np.random.seed(3)
 
     data = pd.read_csv(path + dataset)
-    cb = CaseBase(data)
+    songs_ID = data[['Song','Artist']]
+    dat = data.drop(data.columns[[8,9,10,13,15,16,19,22,23,24,25,26]], axis = 1)
+    cb = CaseBase(dat, num_attrib_solution, attr_categ)
 
-    # INPUT SOFTWARE--------------------------------------------
-    # new_case = [6.7,3.8,1.3]    # stops before
-    new_case = [4.7,3.2,1.3]      # stops end but same class
-    # new_case = [6.9, 3.1, 5.1]  # stops enf and different class
-    # ----------------------------------------------------------
-
-    # R1: RETRIEVE ****
+    # [R1]: RETRIEVE ****
     retrieved_cases = cb.retrieve_v2(new_case)
 
-    # R2: REUSE ****
-    solution = cb.update(retrieved_cases, ['num_continuous', 'categorical'])
+    # [R2]: REUSE ****
+    solution = cb.update(retrieved_cases, type_attrib_solution)
 
-    # R3: REVISE ****
+    # [R3]: REVISE ****
 
-    # R4: RETAIN ****
+    # [R4]: RETAIN ****
 
-    # EXTRA: PLAYLIST CREATION FROM solution
+    # [EXTRA]: PLAYLIST CREATION FROM solution ****
 
     cb.print_tree()
 

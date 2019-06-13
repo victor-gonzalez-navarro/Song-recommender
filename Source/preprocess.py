@@ -4,11 +4,12 @@ from sklearn.cluster import KMeans
 
 class Preprocess:
 
-    def __init__(self):
+    def __init__(self, attr_categ):
         self.attr_names = None
         self.attr_values = {}
         self.attr_types = {}
         self.models = None
+        self.attr_categ = attr_categ
 
     def extract_attr_info(self, data, num_class):
         # Extract the column names of the attributes
@@ -19,7 +20,8 @@ class Preprocess:
         for attr_ix in range(len(self.attr_names)):
             attr_values = np.array(data[self.attr_names[attr_ix]].unique())
 
-            if len(attr_values) > 20:
+            if len(attr_values) > 20 and attr_ix != self.attr_categ:
+                # being selected as numerical attrobute
                 self.attr_types[attr_ix] = "num_continuous"
                 self.attr_values[attr_ix] = []
             else:

@@ -5,11 +5,11 @@ from Source.preprocess import Preprocess
 
 class CaseBase:
 
-    def __init__(self, x):
+    def __init__(self, x, num_class, attr_categ):
         # Preprocess of the data to be stored in the Case Base
         n_clusters = 5
-        self.num_class = 2
-        self.prep = Preprocess()
+        self.num_class = num_class
+        self.prep = Preprocess(attr_categ)
         self.attr_names, self.attr_vals, self.attr_types = self.prep.extract_attr_info(x, self.num_class)
         self.x = x.values
         aux_x, self.attr_vals = self.prep.fit_predict(self.x[:, :-self.num_class], n_clusters=n_clusters)  # Auxiliary X with the
@@ -139,13 +139,19 @@ class CaseBase:
         feat = object.attribute
         instances_ant = []
         while (object.is_leaf != True) and (len(object.case_ids) > 0):
-            distances = self.compute_distances(new_case[feat], self.prep.models[feat].cluster_centers_, feat)
-            featvals = np.argsort(distances[:, 0])
+            distances, closecat, seclosecat = self.compute_distances(new_case[feat], self.prep.models[feat], object.children, feat)
             # Retrieve instances second best and then following the best path
-            retr = object.children[featvals[1]].retrieve_best(new_case, self.prep.models, self.x, self.attr_types)
+            if self.attr_types[feat] == 'num_continuous':
+                featvals = np.argsort(distances[:, 0])
+                retr = object.children[featvals[1]].retrieve_best(new_case, self.prep.models, self.x, self.attr_types)
+            elif self.attr_types[feat] == 'categorical':
+                retr = object.children[seclosecat].retrieve_best(new_case, self.prep.models, self.x, self.attr_types)
             retrieved_cases = np.append(retrieved_cases, retr, axis=0)
             instances_ant = object.case_ids
-            object = object.children[featvals[0]]
+            if self.attr_types[feat] == 'num_continuous':
+                object = object.children[featvals[0]]
+            elif self.attr_types[feat] == 'categorical':
+                object = object.children[closecat]
             feat = object.attribute
         if len(object.case_ids) > 0:
             return np.concatenate((self.x[object.case_ids,:], retrieved_cases), axis=0)
@@ -194,15 +200,19 @@ class CaseBase:
                     solution.append(dict)
         return solution
 
-    def compute_distances(self, inst1, inst2, feat):
+    def compute_distances(self, inst1, inst2, categories, feat):
         distances = []
+        closecat = ''
+        seclosecat = ''
         if self.attr_types[feat] == 'num_continuous':
-            for i in range(inst2.shape[0]):
-                distances.append(np.abs(inst1 - inst2[i,0]))
+            for i in range(inst2.cluster_centers_.shape[0]):
+                distances.append(np.abs(inst1 - inst2.cluster_centers_[i,0]))
         elif self.attr_types[feat] == 'categorical':
-            for i in range(inst2.shape[0]):
-                if inst1 == inst2[i]:
-                    distances[i] = 0
+            categ = list(categories.keys())
+            print('Change this [Victor]')
+            for i in range(len(categ)):
+                if inst1 == categ[i]:
+                    closecat = categ[i]
                 else:
-                    distances[i] = 5
-        return np.array(distances).reshape((len(distances),1))
+                    seclosecat = categ[i]
+        return np.array(distances).reshape((len(distances),1)), closecat, seclosecat
