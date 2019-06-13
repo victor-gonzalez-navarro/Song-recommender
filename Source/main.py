@@ -29,6 +29,8 @@ def main():
 
     # R4: RETAIN ****
 
+    # EXTRA: PLAYLIST CREATION FROM solution
+
     cb.print_tree()
 
     print('Process finished successfully')
