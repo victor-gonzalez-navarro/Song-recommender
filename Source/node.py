@@ -61,11 +61,5 @@ class Node:
             for i in range(inst2.cluster_centers_.shape[0]):
                 distances.append(np.abs(inst1 - inst2.cluster_centers_[i,0]))
         elif attr_types[feat] == 'categorical':
-            categ = list(categories.keys())
-            print('Change this [Victor]')
-            for i in range(len(categ)):
-                if inst1 == categ[i]:
-                    closecat = categ[i]
-            if closecat == '':
-                closecat = categ[i]
+            closecat = inst1
         return np.array(distances).reshape((len(distances),1)), closecat

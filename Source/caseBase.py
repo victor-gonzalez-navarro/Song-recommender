@@ -139,7 +139,7 @@ class CaseBase:
         feat = object.attribute
         instances_ant = []
         while (object.is_leaf != True) and (len(object.case_ids) > 0):
-            distances, closecat, seclosecat = self.compute_distances(new_case[feat], self.prep.models[feat], object.children, feat)
+            distances, seclosecat = self.compute_distances(new_case[feat], self.prep.models[feat], object.children, feat)
             # Retrieve instances second best and then following the best path
             if self.attr_types[feat] == 'num_continuous':
                 featvals = np.argsort(distances[:, 0])
@@ -151,7 +151,7 @@ class CaseBase:
             if self.attr_types[feat] == 'num_continuous':
                 object = object.children[featvals[0]]
             elif self.attr_types[feat] == 'categorical':
-                object = object.children[closecat]
+                object = object.children[new_case[feat]]
             feat = object.attribute
         if len(object.case_ids) > 0:
             return np.concatenate((self.x[object.case_ids,:], retrieved_cases), axis=0)
@@ -201,18 +201,30 @@ class CaseBase:
         return solution
 
     def compute_distances(self, inst1, inst2, categories, feat):
+        diction = dict()
+        diction[3] = ['not at all', 'some concentration', 'yes, my full concentration']
+        diction[4] = ['really unhappy', 'not so happy', 'neutral', 'happy', 'very happy']
+        diction[5] = ['very clam', 'calm', 'neutral', 'with some energy', 'with a lot of energy']
+        diction[6] = ['I get less happy', 'I keep the same', 'I get happier']
+        diction[7] = ['I get more relaxed', 'I keep the same', 'I feel with more energy']
+
         distances = []
-        closecat = ''
         seclosecat = ''
         if self.attr_types[feat] == 'num_continuous':
             for i in range(inst2.cluster_centers_.shape[0]):
                 distances.append(np.abs(inst1 - inst2.cluster_centers_[i,0]))
         elif self.attr_types[feat] == 'categorical':
             categ = list(categories.keys())
-            print('Change this [Victor]')
-            for i in range(len(categ)):
-                if inst1 == categ[i]:
-                    closecat = categ[i]
+            if feat == 2 or feat == 1:
+                print('Change this [Victor]')
+                for i in range(len(categ)):
+                    if inst1 != categ[i]:
+                        seclosecat = categ[i]
+            else:
+                idx = diction[feat].index(inst1)
+                if idx == len(diction[feat])-1:
+                    seclosecat = diction[feat][idx-1]
                 else:
-                    seclosecat = categ[i]
-        return np.array(distances).reshape((len(distances),1)), closecat, seclosecat
+                    seclosecat = diction[feat][idx+1]
+
+        return np.array(distances).reshape((len(distances),1)), seclosecat
