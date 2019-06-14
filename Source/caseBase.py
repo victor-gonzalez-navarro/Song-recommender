@@ -32,7 +32,7 @@ class CaseBase:
         best_aux_score = -1
         for feat_ix in avail_attrs:
             unique_vals, counts = np.unique(x[:, feat_ix], return_counts=True)
-            score = len(unique_vals) / len(self.attr_vals[feat_ix])
+            score = len(unique_vals) / len(self.attr_vals[feat_ix]) - np.exp(len(self.attr_vals[feat_ix])-len(self.attr_vals[2]))
 
             # Check the number of possible values for this attribute are in the remaining dataset
             if score > best_score:
@@ -158,53 +158,68 @@ class CaseBase:
         else:
             return np.concatenate((self.x[instances_ant,:], retrieved_cases), axis=0)
 
-    def update(self, retrieved_cases, sol_types):
+    def update(self, retrieved_cases, sol_types, new_case):
+        num_conc = 3; num_happ = 4; num_energ = 5; num_futHappy = 6; num_futEnerg = 7;
+        diction = {}
+        diction[num_conc] = ['not at all', 'some concentration', 'yes, my full concentration']
+        diction[num_happ] = ['really unhappy', 'not so happy', 'neutral', 'happy', 'very happy']
+        diction[num_energ] = ['very calm', 'calm', 'neutral', 'with some energy', 'with a lot of energy']
+        diction[num_futHappy] = ['I get less happy', 'I keep the same', 'I get happier']
+        diction[num_futEnerg] = ['I get more relaxed', 'I keep the same', 'I feel with more energy']
         solution = []
-        # We stop in a leaf that has depth smaller the number of attributes
-        if retrieved_cases.shape[0] == 0:
-            dict = {}
-            dict['leaf'] = False
-            dict['num_inst'] = retrieved_cases.shape[0]
-            for i in range(self.num_class):
-                if sol_types[i] == 'num_continuous':
-                    dict['min'] = np.min(retrieved_cases[:, -self.num_class + i])
-                    dict['mean'] = np.mean(retrieved_cases[:, -self.num_class + i])
-                    dict['max'] = np.max(retrieved_cases[:, -self.num_class + i])
-                    solution.append(dict)
-                elif sol_types[i] == 'categorical':
-                    unique_vals, counts = np.unique(retrieved_cases[:, -self.num_class + i], return_counts=True)
-                    if len(counts) > 1:
-                        dict['2Pop'] = unique_vals[1]
-                    else:
-                        dict['2Pop'] = 'None'
-                    dict['1Pop'] = unique_vals[0]
-                    solution.append(dict)
-        # We stop in a leaf that has depth equal to the number of attributes
-        else:
-            for i in range(self.num_class):
-                dict = {}
-                dict['leaf'] = True
-                dict['num_inst'] = retrieved_cases[:, -self.num_class + i].shape[0]
-                if sol_types[i] == 'num_continuous':
-                    dict['min'] = np.min(retrieved_cases[:, -self.num_class + i])
-                    dict['mean'] = np.mean(retrieved_cases[:, -self.num_class + i])
-                    dict['max'] = np.max(retrieved_cases[:, -self.num_class + i])
-                    solution.append(dict)
-                elif sol_types[i] == 'categorical':
-                    unique_vals, counts = np.unique(retrieved_cases[:, -self.num_class + i], return_counts=True)
-                    if len(counts) > 1:
-                        dict['2Pop'] = unique_vals[1]
-                    else:
-                        dict['2Pop'] = 'None'
-                    dict['1Pop'] = unique_vals[0]
-                    solution.append(dict)
+        dict = {}
+        dict['num_inst'] = retrieved_cases.shape[0]
+        for i in range(self.num_class):
+            if sol_types[i] == 'num_continuous':
+                dict['min'] = np.min(retrieved_cases[:, -self.num_class + i])
+                dict['max'] = np.max(retrieved_cases[:, -self.num_class + i])
+                if i == 6:  # Attribute number 6 is Tempo
+                    # + Concentration --> - Tempo
+                    unique_vals, counts = np.unique(retrieved_cases[:, num_conc], return_counts=True)
+                    distance = diction[num_conc].index(new_case[num_conc]) - diction[num_conc].index(unique_vals[0])
+                    mean_Tempo = np.mean(retrieved_cases[:, -self.num_class + i])
+                    dict['mean'] = mean_Tempo - distance*0.1*(np.max(self.x[:,-1])-np.min(self.x[:,-1]))
+                    # + Happiness --> + Tempo
+                    unique_vals, counts = np.unique(retrieved_cases[:, num_happ], return_counts=True)
+                    distance = diction[num_happ].index(new_case[num_happ]) - diction[num_happ].index(unique_vals[0])
+                    dict['mean'] = dict['mean'] + distance*0.1*(np.max(self.x[:,-1])-np.min(self.x[:,-1]))
+                    # + Energy --> + Tempo
+                    unique_vals, counts = np.unique(retrieved_cases[:, num_energ], return_counts=True)
+                    distance = diction[num_energ].index(new_case[num_energ]) - diction[num_energ].index(unique_vals[0])
+                    dict['mean'] = dict['mean'] + distance*0.1*(np.max(self.x[:,-1])-np.min(self.x[:,-1]))
+                    # + Future Happiness --> + Tempo
+                    unique_vals, counts = np.unique(retrieved_cases[:, num_futHappy], return_counts=True)
+                    distance = diction[num_futHappy].index(new_case[num_futHappy]) - diction[num_futHappy].index(unique_vals[0])
+                    dict['mean'] = dict['mean'] + distance*0.1*(np.max(self.x[:,-1])-np.min(self.x[:,-1]))
+                    # + Future Energy --> + Tempo
+                    unique_vals, counts = np.unique(retrieved_cases[:, num_futEnerg], return_counts=True)
+                    distance = diction[num_futEnerg].index(new_case[num_futEnerg]) - diction[num_futEnerg].index(unique_vals[0])
+                    dict['mean'] = dict['mean'] + distance*0.1*(np.max(self.x[:,-1])-np.min(self.x[:,-1]))
+                    # Update min and max the same as the mean
+                    dict['min'] = dict['min'] + (mean_Tempo-dict['mean'])
+                    dict['max'] = dict['max'] + (mean_Tempo-dict['mean'])
+                elif i == 5:  # Attribute number 5 is Valence
+                    # + Happininess --> + Valence
+                    unique_vals, counts = np.unique(retrieved_cases[:, num_happ], return_counts=True)
+                    distance = diction[num_happ].index(new_case[num_happ]) - diction[num_happ].index(unique_vals[0])
+                    mean_Valence = np.mean(retrieved_cases[:, -self.num_class + i])
+                    dict['mean'] = mean_Valence - distance*0.1*(np.max(self.x[:,-2])-np.min(self.x[:,-2]))
+                    # + Future Happiness --> + Valence
+                    unique_vals, counts = np.unique(retrieved_cases[:, num_futHappy], return_counts=True)
+                    distance = diction[num_futHappy].index(new_case[num_futHappy]) - diction[num_futHappy].index(unique_vals[0])
+                    dict['mean'] = dict['mean'] + distance*0.1*(np.max(self.x[:,-2])-np.min(self.x[:,-2]))
+                    # Update min and max the same as the mean
+                    dict['min'] = dict['min'] + (mean_Valence-dict['mean'])
+                    dict['max'] = dict['max'] + (mean_Valence-dict['mean'])
+            solution.append(dict)
         return solution
 
     def compute_distances(self, inst1, inst2, categories, feat):
         diction = dict()
+        diction[2] = ['Instrumental-Classical', 'Vocal', 'Blues', 'Jazz', 'Rock', 'Hard Rock', 'Dance', 'Pop', 'Reggaeton', 'Reggae', 'Latin']
         diction[3] = ['not at all', 'some concentration', 'yes, my full concentration']
         diction[4] = ['really unhappy', 'not so happy', 'neutral', 'happy', 'very happy']
-        diction[5] = ['very clam', 'calm', 'neutral', 'with some energy', 'with a lot of energy']
+        diction[5] = ['very calm', 'calm', 'neutral', 'with some energy', 'with a lot of energy']
         diction[6] = ['I get less happy', 'I keep the same', 'I get happier']
         diction[7] = ['I get more relaxed', 'I keep the same', 'I feel with more energy']
 
@@ -216,7 +231,6 @@ class CaseBase:
         elif self.attr_types[feat] == 'categorical':
             categ = list(categories.keys())
             if feat == 2 or feat == 1:
-                print('Change this [Victor]')
                 for i in range(len(categ)):
                     if inst1 != categ[i]:
                         seclosecat = categ[i]

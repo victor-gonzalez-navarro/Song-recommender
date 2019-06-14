@@ -1,6 +1,7 @@
 import numpy as np
 import pandas as pd
 from Source.caseBase import CaseBase
+from Source.auxiliaryFunct import menu
 
 
 def main():
@@ -10,6 +11,9 @@ def main():
     type_attrib_solution = ['num_continuous']*num_attrib_solution
     attr_categ = 2  # force attribute 2 to be categorical
     # ------------------------------------------------------------------------------------------------------------------
+
+    # User introduces new input
+    new_case = menu(new_case)
 
     path = '../Data/'
     dataset = 'songs.csv'
@@ -26,7 +30,7 @@ def main():
     retrieved_cases = cb.retrieve_v2(new_case)
 
     # [R2]: REUSE ****
-    solution = cb.update(retrieved_cases, type_attrib_solution)
+    solution = cb.update(retrieved_cases, type_attrib_solution, new_case)
 
     # [R3]: REVISE ****
 
@@ -34,7 +38,7 @@ def main():
 
     # [EXTRA]: PLAYLIST CREATION FROM solution ****
 
-    cb.print_tree()
+    # cb.print_tree()
 
     print('Process finished successfully')
 

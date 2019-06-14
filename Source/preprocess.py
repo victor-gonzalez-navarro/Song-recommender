@@ -38,7 +38,7 @@ class Preprocess:
         for i in range(len(self.attr_names)):
             if self.attr_types[i] == 'num_continuous':
                 if print_section:
-                    print('\n\033[1mDISCRETIZATION:\033[0m')
+                    # print('\n\033[1mDISCRETIZATION:\033[0m')
                     print_section = False
 
                 km = KMeans(n_clusters=n_clusters)
@@ -47,9 +47,9 @@ class Preprocess:
                 aux_data[:, i] = km.predict(aux_data[:, i].reshape(-1, 1))
                 self.attr_values[i] = np.array(range(n_clusters))
 
-                print('The cluster centers obtained for the variable \033[1m' + self.attr_names[i] + '\033[0m are:')
-                for c in range(n_clusters):
-                    print('Cluster ' + str(c) + ': ' + str(km.cluster_centers_[c]))
+                # print('The cluster centers obtained for the variable \033[1m' + self.attr_names[i] + '\033[0m are:')
+                # for c in range(n_clusters):
+                #     print('Cluster ' + str(c) + ': ' + str(km.cluster_centers_[c]))
 
         return aux_data, self.attr_values
 
