@@ -1,6 +1,7 @@
 import numpy as np
 import pandas as pd
 from Source.caseBase import CaseBase
+from Source.auxiliaryFunct import menu
 
 
 def main():
@@ -11,6 +12,9 @@ def main():
     attr_categ = 2  # force attribute 2 to be categorical
     playlist_length = 5
     # ------------------------------------------------------------------------------------------------------------------
+
+    # User introduces new input
+    new_case = menu(new_case)
 
     path = '../Data/'
     dataset = 'songs.csv'
@@ -28,7 +32,7 @@ def main():
     retrieved_cases = cb.retrieve_v2(new_case)
 
     # [R2]: REUSE ****
-    solution = cb.update(retrieved_cases, type_attrib_solution)
+    solution = cb.update(retrieved_cases, type_attrib_solution, new_case)
 
     # [R3]: REVISE ****
 
@@ -39,7 +43,9 @@ def main():
 
     pd.options.display.max_colwidth = 100
     print()
+    print('The generated playlist is:\n')
     print(playlist.to_string())
+    print()
 
 
 

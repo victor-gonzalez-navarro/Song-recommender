@@ -9,7 +9,6 @@ class Node:
         self.attribute = attribute
         self.avail_attrs = avail_attrs
         self.children = children
-        # self.xvic = None
 
         self.depth = depth
 
@@ -62,4 +61,14 @@ class Node:
                 distances.append(np.abs(inst1 - inst2.cluster_centers_[i,0]))
         elif attr_types[feat] == 'categorical':
             closecat = inst1
+            categ = list(categories.keys())
+            if feat == 2:
+                intersectt = []
+                genres_newcase = inst1.split(',')
+                for i in range(len(categ)):
+                    genres_possible = categ[i].split(',')
+                    intersectt.append(len(set(genres_newcase).intersection(set(genres_possible))))
+                sort_index = np.argsort(np.array(intersectt))
+                closecat = categ[sort_index[-1]]
+
         return np.array(distances).reshape((len(distances),1)), closecat
