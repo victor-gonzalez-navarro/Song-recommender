@@ -139,7 +139,8 @@ class CaseBase:
         feat = object.attribute
         instances_ant = []
         while (object.is_leaf != True) and (len(object.case_ids) > 0):
-            distances, seclosecat = self.compute_distances(new_case[feat], self.prep.models[feat], object.children, feat)
+            distances, closecat, seclosecat = self.compute_distances(new_case[feat], self.prep.models[feat],
+                                object.children, feat)
             # Retrieve instances second best and then following the best path
             if self.attr_types[feat] == 'num_continuous':
                 featvals = np.argsort(distances[:, 0])
@@ -151,7 +152,7 @@ class CaseBase:
             if self.attr_types[feat] == 'num_continuous':
                 object = object.children[featvals[0]]
             elif self.attr_types[feat] == 'categorical':
-                object = object.children[new_case[feat]]
+                object = object.children[closecat]
             feat = object.attribute
         if len(object.case_ids) > 0:
             return np.concatenate((self.x[object.case_ids,:], retrieved_cases), axis=0)
@@ -217,15 +218,26 @@ class CaseBase:
 
         distances = []
         seclosecat = ''
+        closecat = ''
         if self.attr_types[feat] == 'num_continuous':
             for i in range(inst2.cluster_centers_.shape[0]):
                 distances.append(np.abs(inst1 - inst2.cluster_centers_[i,0]))
         elif self.attr_types[feat] == 'categorical':
+            closecat = inst1
             categ = list(categories.keys())
-            if feat == 2 or feat == 1:
+            if feat == 1:
                 for i in range(len(categ)):
                     if inst1 != categ[i]:
                         seclosecat = categ[i]
+            elif feat == 2:
+                intersectt = []
+                genres_newcase = inst1.split(',')
+                for i in range(len(categ)):
+                    genres_possible = categ[i].split(',')
+                    intersectt.append(len(set(genres_newcase).intersection(set(genres_possible))))
+                sort_index = np.argsort(np.array(intersectt))
+                closecat = categ[sort_index[-1]]
+                seclosecat = categ[sort_index[-2]]
             else:
                 idx = diction[feat].index(inst1)
                 if idx == len(diction[feat])-1:
@@ -233,4 +245,4 @@ class CaseBase:
                 else:
                     seclosecat = diction[feat][idx+1]
 
-        return np.array(distances).reshape((len(distances),1)), seclosecat
+        return np.array(distances).reshape((len(distances),1)), closecat, seclosecat

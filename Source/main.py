@@ -38,7 +38,7 @@ def main():
 
     # [EXTRA]: PLAYLIST CREATION FROM solution ****
 
-    # cb.print_tree()
+    cb.print_tree()
 
     print('Process finished successfully')
 
