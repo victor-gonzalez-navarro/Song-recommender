@@ -179,17 +179,9 @@ class CaseBase:
                     distance = diction[num_conc].index(new_case[num_conc]) - diction[num_conc].index(unique_vals[0])
                     mean_Tempo = np.mean(retrieved_cases[:, -self.num_class + i])
                     dict['mean'] = mean_Tempo - distance*0.1*(np.max(self.x[:,-1])-np.min(self.x[:,-1]))
-                    # + Happiness --> + Tempo
-                    unique_vals, counts = np.unique(retrieved_cases[:, num_happ], return_counts=True)
-                    distance = diction[num_happ].index(new_case[num_happ]) - diction[num_happ].index(unique_vals[0])
-                    dict['mean'] = dict['mean'] + distance*0.1*(np.max(self.x[:,-1])-np.min(self.x[:,-1]))
                     # + Energy --> + Tempo
                     unique_vals, counts = np.unique(retrieved_cases[:, num_energ], return_counts=True)
                     distance = diction[num_energ].index(new_case[num_energ]) - diction[num_energ].index(unique_vals[0])
-                    dict['mean'] = dict['mean'] + distance*0.1*(np.max(self.x[:,-1])-np.min(self.x[:,-1]))
-                    # + Future Happiness --> + Tempo
-                    unique_vals, counts = np.unique(retrieved_cases[:, num_futHappy], return_counts=True)
-                    distance = diction[num_futHappy].index(new_case[num_futHappy]) - diction[num_futHappy].index(unique_vals[0])
                     dict['mean'] = dict['mean'] + distance*0.1*(np.max(self.x[:,-1])-np.min(self.x[:,-1]))
                     # + Future Energy --> + Tempo
                     unique_vals, counts = np.unique(retrieved_cases[:, num_futEnerg], return_counts=True)
@@ -203,7 +195,7 @@ class CaseBase:
                     unique_vals, counts = np.unique(retrieved_cases[:, num_happ], return_counts=True)
                     distance = diction[num_happ].index(new_case[num_happ]) - diction[num_happ].index(unique_vals[0])
                     mean_Valence = np.mean(retrieved_cases[:, -self.num_class + i])
-                    dict['mean'] = mean_Valence - distance*0.1*(np.max(self.x[:,-2])-np.min(self.x[:,-2]))
+                    dict['mean'] = mean_Valence + distance*0.1*(np.max(self.x[:,-2])-np.min(self.x[:,-2]))
                     # + Future Happiness --> + Valence
                     unique_vals, counts = np.unique(retrieved_cases[:, num_futHappy], return_counts=True)
                     distance = diction[num_futHappy].index(new_case[num_futHappy]) - diction[num_futHappy].index(unique_vals[0])
