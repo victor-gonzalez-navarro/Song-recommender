@@ -1,16 +1,22 @@
 import numpy as np
 from Source.node import Node
 from Source.preprocess import Preprocess
+from scipy.linalg import norm
+from sklearn.preprocessing import MinMaxScaler
 
 
 class CaseBase:
 
-    def __init__(self, x, num_class, attr_categ):
+    def __init__(self, x, num_class, attr_categ, songs_info):
         # Preprocess of the data to be stored in the Case Base
         n_clusters = 5
         self.num_class = num_class
         self.prep = Preprocess(attr_categ)
-        self.attr_names, self.attr_vals, self.attr_types = self.prep.extract_attr_info(x, self.num_class)
+        self.attr_names, self.attr_vals, self.attr_types, self.sol_cols = self.prep.extract_attr_info(x, self.num_class)
+        self.songs_info = songs_info
+
+        self.scaler = MinMaxScaler()
+        self.scaler.fit(self.songs_info[self.sol_cols])
         self.x = x.values
         aux_x, self.attr_vals = self.prep.fit_predict(self.x[:, :-self.num_class], n_clusters=n_clusters)  # Auxiliary X with the
                                                                                                            # preprocessed data
@@ -80,7 +86,7 @@ class CaseBase:
 
     def check_node(self, x_tst, tree):
         if tree.is_leaf:
-            return tree.terminal_cases
+            return tree.case_ids
         else:
             return self.check_node(x_tst, tree.children[x_tst[tree.attribute]])
 
@@ -228,3 +234,150 @@ class CaseBase:
                     seclosecat = diction[feat][idx+1]
 
         return np.array(distances).reshape((len(distances),1)), seclosecat
+
+    def create_playlist(self, new_case, solution, max_length, norm_feats, debug):
+        diction = dict()
+        diction[2] = ['Instrumental-Classical', 'Vocal', 'Blues', 'Jazz', 'Rock', 'Hard Rock', 'Dance', 'Pop', 'Reggaeton', 'Reggae', 'Latin']
+        diction[3] = ['not at all', 'some concentration', 'yes, my full concentration']
+        diction[4] = ['really unhappy', 'not so happy', 'neutral', 'happy', 'very happy']
+        diction[5] = ['very calm', 'calm', 'neutral', 'with some energy', 'with a lot of energy']
+        diction[6] = ['I get less happy', 'I keep the same', 'I get happier']
+        diction[7] = ['I get more relaxed', 'I keep the same', 'I feel with more energy']
+
+        # Weighting the Previous attributes from 3 to 7
+        feat_weights = np.array([[0.2, 0.1, 0.1, 0.3, 0.3]])
+
+        # Each attribute vote on the value to start from for each song feature
+        start = ['min', 'mean', 'max']
+        feat_start = [[] for _ in range(self.num_class)]
+        for feat in range(3, 8):
+            ix = diction[feat].index(new_case[feat])
+            ix = ix / len(diction[feat]) * 3
+            inverse_ix = -ix % 2
+            if feat in [3, 6, 7]:
+                feat_start[0].append(inverse_ix)
+                feat_start[1].append(inverse_ix)
+                feat_start[2].append(inverse_ix)
+                feat_start[3].append(ix)
+                feat_start[4].append(ix)
+                feat_start[5].append(inverse_ix)
+                feat_start[6].append(inverse_ix)
+            elif feat in [4]:
+                feat_start[0].append(ix)
+                feat_start[1].append(ix)
+                feat_start[2].append(ix)
+                feat_start[3].append(inverse_ix)
+                feat_start[4].append(inverse_ix)
+                feat_start[5].append(ix)
+                feat_start[6].append(ix)
+            elif feat in [5]:
+                feat_start[0].append(ix)
+                feat_start[1].append(ix)
+                feat_start[2].append(ix)
+                feat_start[3].append(inverse_ix)
+                feat_start[4].append(inverse_ix)
+                feat_start[5].append(inverse_ix)
+                feat_start[6].append(ix)
+
+        # Normalize song features with MinMaxScaling
+        if norm_feats:
+            song_data = self.scaler.transform(self.songs_info[self.sol_cols].values)
+        else:
+            song_data = self.songs_info[self.sol_cols].values
+
+        # Weighted voting takes place
+        feat_start = [np.array(votes).dot(feat_weights.T)[0] for votes in feat_start]
+        init_point = []
+        search_directions = []
+
+        # The initial point will be selecting from the proportion of the range it lies in (0.86 min-mean)
+        for point in range(self.num_class):
+            low_ix = int(feat_start[point])
+            min_val = solution[point][start[low_ix]]
+            max_val = solution[point][start[low_ix+1]]
+            init_point.append((max_val - min_val) * (feat_start[point] % 1) + min_val)
+
+            # Searching Directions are selected based on the region it lies
+            # (min-mean goes upward, mean-max goes downward)
+            search_directions.append(-np.sign(feat_start[point]-1))
+
+        if debug:
+            print('The initial point is: ' + str(init_point))
+            print('The search direction is: ' + str(search_directions))
+
+        if norm_feats:
+            init_point = self.scaler.transform([init_point])[0, :]
+        best_score = np.inf
+
+        # Extract the 3 styles this user prefers and the respective songs in the dataset
+        styles = new_case[2].split(',')
+        avail_songs = [i for i in range(self.songs_info.shape[0]) if self.songs_info['Genre'].values[i] in styles]
+
+        # Check on the length of the available songs at the dataset
+        if max_length > len(avail_songs):
+            max_length = len(avail_songs)
+            print('Setting the Maximum Length of the Playlist to ' + str(len(avail_songs)) + ' due to lack of more '
+                  'songs of the user genre tastes')
+
+        # Select the closest song to the initial point
+        for song_id in avail_songs:
+            score = norm(song_data[song_id] - init_point)
+            if score < best_score:
+                best_score = score
+                selected_song = song_id
+
+        if debug:
+            print('The selected song is:\n' + str(self.songs_info.ix[selected_song]) + '\n')
+
+        n_selected = 1
+        avail_songs.remove(selected_song)
+        playlist = [selected_song]
+
+        # Continue the playlist until it is full
+        while n_selected < max_length:
+            # Try to find a song following the current search directions
+            prev_song = selected_song
+            selected_song = None
+            best_score = np.inf
+            for song_id in avail_songs:
+                diff = song_data[song_id] - prev_song
+                if np.array_equal(np.sign(diff), search_directions):
+                    score = norm(diff)
+                    if score < best_score:
+                        best_score = score
+                        selected_song = song_id
+
+            # In case there is no such song, modify the less possible amount of search directions
+            # and find a song following it
+            new_search_directions = np.copy(search_directions)
+            if selected_song is None:
+                best_score_directions = np.inf
+                for song_id in avail_songs:
+                    diff = song_data[song_id] - prev_song
+                    score_directions = sum(np.abs(np.sign(diff) - search_directions))
+                    if score_directions < best_score_directions:
+                        score = norm(diff)
+                        if score < best_score:
+                            best_score = score
+                            selected_song = song_id
+                            new_search_directions = np.sign(diff)
+
+                if debug:
+                    print()
+                    print('The search direction has changed to : ' + str(new_search_directions))
+                    print()
+
+            if debug:
+                print('The selected song is:\n' + str(self.songs_info.ix[selected_song]) + '\n')
+
+            n_selected += 1
+            avail_songs.remove(selected_song)
+            playlist.append(selected_song)
+            search_directions = np.copy(new_search_directions)
+
+        # Replace the list of indexes with the list of info about the songs
+        playlist = self.songs_info[['Song', 'Artist', 'Genre', 'Link_Spotify']].ix[playlist]
+        playlist.reset_index(inplace=True, drop=True)
+
+        return playlist
+

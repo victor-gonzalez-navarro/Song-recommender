@@ -5,22 +5,24 @@ from Source.caseBase import CaseBase
 
 def main():
     # HYPERPARAMETERS---------------------------------------------------------------------------------------------------
-    new_case = [37, 'Male', "Blues,Instrumental-Classical,Rock", 'some concentration', 'happy', 'calm','I keep the same', 'I keep the same']
+    new_case = [37, 'Male', "Blues,Instrumental-Classical,Rock", 'some concentration', 'happy', 'calm', 'I keep the same', 'I keep the same']
     num_attrib_solution = 7
     type_attrib_solution = ['num_continuous']*num_attrib_solution
     attr_categ = 2  # force attribute 2 to be categorical
+    playlist_length = 5
     # ------------------------------------------------------------------------------------------------------------------
 
     path = '../Data/'
     dataset = 'songs.csv'
+    songs_dataset = 'songs_DB.csv'
 
     # For testing purposes, set seed of numpy (used by sklearn as well)
     np.random.seed(3)
 
     data = pd.read_csv(path + dataset)
-    songs_ID = data[['Song','Artist']]
-    dat = data.drop(data.columns[[8,9,10,13,15,16,19,22,23,24,25,26]], axis = 1)
-    cb = CaseBase(dat, num_attrib_solution, attr_categ)
+    songs_info = pd.read_csv(path + songs_dataset)  # , delimiter='|')
+    dat = data.drop(data.columns[[8,9,10,13,15,16,19,22,23,24,25,26]], axis=1)
+    cb = CaseBase(dat, num_attrib_solution, attr_categ, songs_info)
 
     # [R1]: RETRIEVE ****
     retrieved_cases = cb.retrieve_v2(new_case)
@@ -33,8 +35,15 @@ def main():
     # [R4]: RETAIN ****
 
     # [EXTRA]: PLAYLIST CREATION FROM solution ****
+    playlist = cb.create_playlist(new_case, solution, max_length=playlist_length, norm_feats=True, debug=False)
 
-    cb.print_tree()
+    pd.options.display.max_colwidth = 100
+    print()
+    print(playlist.to_string())
+
+
+
+    # cb.print_tree()
 
     print('Process finished successfully')
 

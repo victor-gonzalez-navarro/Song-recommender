@@ -6,6 +6,7 @@ class Preprocess:
 
     def __init__(self, attr_categ):
         self.attr_names = None
+        self.sol_cols = None
         self.attr_values = {}
         self.attr_types = {}
         self.models = None
@@ -13,7 +14,9 @@ class Preprocess:
 
     def extract_attr_info(self, data, num_class):
         # Extract the column names of the attributes
-        self.attr_names = data.columns.values.tolist()[:-num_class]
+        columns = data.columns.values.tolist()
+        self.attr_names = columns[:-num_class]
+        self.sol_cols = columns[-num_class:]
         # self.attr_names.remove('class')
 
         # For each column extract the possible values
@@ -28,7 +31,7 @@ class Preprocess:
                 self.attr_types[attr_ix] = "categorical"
                 self.attr_values[attr_ix] = attr_values
 
-        return self.attr_names, self.attr_values, self.attr_types
+        return self.attr_names, self.attr_values, self.attr_types, self.sol_cols
 
     def fit_predict(self, data, n_clusters):
         print_section = True
