@@ -201,12 +201,13 @@ class CaseBase:
         diction[num_futHappy] = ['I get less happy', 'I keep the same', 'I get happier']
         diction[num_futEnerg] = ['I get more relaxed', 'I keep the same', 'I feel with more energy']
         solution = []
-        dict = {}
-        dict['num_inst'] = retrieved_cases.shape[0]
         for i in range(self.num_class):
+            dict = {}
+            dict['num_inst'] = retrieved_cases.shape[0]
             if sol_types[i] == 'num_continuous':
                 dict['min'] = np.min(retrieved_cases[:, -self.num_class + i])
                 dict['max'] = np.max(retrieved_cases[:, -self.num_class + i])
+                dict['mean'] = np.mean(retrieved_cases[:, -self.num_class + i])
                 if i == 6:  # Attribute number 6 is Tempo
                     # + Concentration --> - Tempo
                     unique_vals, counts = np.unique(retrieved_cases[:, num_conc], return_counts=True)
