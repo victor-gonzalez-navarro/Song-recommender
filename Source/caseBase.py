@@ -3,13 +3,13 @@ from Source.node import Node
 from Source.preprocess import Preprocess
 from scipy.linalg import norm
 from sklearn.preprocessing import MinMaxScaler
+from Source.SpotifyAPI import BINS, NORM_BINS, BINS_BEGIN, BINS_STEPS
 
 
 class CaseBase:
 
-    def __init__(self, x, num_class, attr_categ, songs_info):
+    def __init__(self, x, num_class, attr_categ, songs_info, n_clusters=5):
         # Preprocess of the data to be stored in the Case Base
-        n_clusters = 5
         self.num_class = num_class
         self.prep = Preprocess(attr_categ)
         self.attr_names, self.attr_vals, self.attr_types, self.sol_cols = self.prep.extract_attr_info(x, self.num_class)
@@ -27,6 +27,32 @@ class CaseBase:
                                                              # (+ leaf)
 
         self.make_tree(self.x, aux_x)
+
+    def get_tree_depth(self, tree=None, depth=0):
+        if tree is None:
+            tree = self.tree
+
+        if tree.is_leaf:
+            return depth + 1
+
+        depths = []
+        for _, child_tree in tree.children.items():
+            depths.append(self.get_tree_depth(child_tree, depth) + 1)
+
+        return max(depths)
+
+    def get_n_cases(self, tree=None):
+        if tree is None:
+            tree = self.tree
+
+        if tree.is_leaf:
+            return len(tree.case_ids)
+
+        cases = 0
+        for _, child_tree in tree.children.items():
+            cases += self.get_n_cases(child_tree)
+
+        return cases
 
     def make_tree(self, x, x_aux):
         self.tree = self.find_best_partition(x_aux, avail_attrs=list(range(x_aux.shape[1])), depth=0)
@@ -101,25 +127,26 @@ class CaseBase:
         self.print_tree_aux('Root', self.tree)
 
     def print_tree_aux(self, branch, tree):
-        if not tree.is_leaf:
+        if tree.is_leaf and tree.case_ids:
+            first = True
+            for case in tree.case_ids:
+                if first:
+                    print('\t\t\t\t|' * tree.depth + '\u2919\033[92m' + str(branch) +
+                          '\033[0m\u291a\u27f6\tcase_\033[94m' + str(self.x[case, :]) + '\033[0m')
+                    first = False
+                else:
+                    print('\t\t\t\t|' * tree.depth + '\u2919\033[92m' + ' ' * len(str(branch)) +
+                          '\033[0m\u291a\u27f6\tcase_\033[94m' + str(self.x[case, :]) + '\033[0m')
+
+        elif tree.is_leaf and not tree.case_ids:
+            print('\t\t\t\t|' * tree.depth + '\u2919\033[92m' + str(branch) + '\033[0m\u291a\u27f6case_\033[94m' +
+                  'No cases yet' + '\033[0m')
+
+        else:
             print('\t\t\t\t|' * tree.depth + '\u2919\033[92m' + str(branch) + '\033[0m\u291a\u27f6attr_\033[1m' +
                   str(self.attr_names[tree.attribute]) + '\033[0m')
             for branch, child_tree in tree.children.items():
                 self.print_tree_aux(branch, child_tree)
-        else:
-            if tree.case_ids:
-                first = True
-                for case in tree.case_ids:
-                    if first:
-                        print('\t\t\t\t|' * tree.depth + '\u2919\033[92m' + str(branch) +
-                              '\033[0m\u291a\u27f6\tcase_\033[94m' + str(self.x[case, :]) + '\033[0m')
-                        first = False
-                    else:
-                        print('\t\t\t\t|' * tree.depth + '\u2919\033[92m' + ' ' * len(str(branch)) +
-                              '\033[0m\u291a\u27f6\tcase_\033[94m' + str(self.x[case, :]) + '\033[0m')
-            else:
-                print('\t\t\t\t|' * tree.depth + '\u2919\033[92m' + str(branch) + '\033[0m\u291a\u27f6case_\033[94m' +
-                      'No cases yet' + '\033[0m')
 
     # It follows the best path, and in case it arrives to a point with no more instance it returns the instances
     # included by the parent
@@ -398,3 +425,22 @@ class CaseBase:
         playlist.reset_index(inplace=True, drop=True)
 
         return playlist
+
+    def revise(self, solution, new_case, automatic=True):
+        DANCEABILITY = 1
+        ENERGY = 2
+        LOUDNESS = 3
+        ACOUSTICNESS = 4
+        INSTRUMENTALNESS = 5
+        VALENCE = 6
+        TEMPO = 7
+
+        if automatic:
+            for i, parameter in enumerate(solution):
+                print(parameter['mean'], i)
+
+            print(len(solution))
+            print(solution)
+            print(self.get_n_cases())
+
+        return

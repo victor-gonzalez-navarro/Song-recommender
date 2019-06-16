@@ -6,7 +6,7 @@ from Source.auxiliaryFunct import menu
 
 def main():
     # HYPERPARAMETERS---------------------------------------------------------------------------------------------------
-    new_case = [37, 'Male', "Blues,Instrumental-Classical,Rock", 'some concentration', 'happy', 'calm', 'I keep the same', 'I keep the same']
+    new_case = [200, 'Male', "Instrumental-Classical,Dance,Blues", 'some concentration', 'really unhappy', 'calm', 'I keep the same', 'I keep the same']
     num_attrib_solution = 7
     type_attrib_solution = ['num_continuous']*num_attrib_solution
     attr_categ = 2  # force attribute 2 to be categorical
@@ -14,7 +14,7 @@ def main():
     # ------------------------------------------------------------------------------------------------------------------
 
     # User introduces new input
-    new_case = menu(new_case)
+    # new_case = menu(new_case)
 
     path = '../Data/'
     dataset = 'songs.csv'
@@ -30,13 +30,17 @@ def main():
 
     # [R1]: RETRIEVE ****
     retrieved_cases = cb.retrieve_v2(new_case)
+    print(retrieved_cases)
 
     # [R2]: REUSE ****
     solution = cb.update(retrieved_cases, type_attrib_solution, new_case)
 
     # [R3]: REVISE ****
+    positive = cb.revise(solution, new_case)
 
     # [R4]: RETAIN ****
+    if positive:
+        cb.retain(solution, new_case)
 
     # [EXTRA]: PLAYLIST CREATION FROM solution ****
     playlist = cb.create_playlist(new_case, solution, max_length=playlist_length, norm_feats=True, debug=False)
@@ -54,4 +58,5 @@ def main():
     print('Process finished successfully')
 
 
-main()
+if __name__ == '__main__':
+    main()
