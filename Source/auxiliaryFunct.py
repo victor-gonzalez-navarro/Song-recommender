@@ -1,7 +1,8 @@
 import numpy as np
 
 
-def menu(new_case):
+def menu():
+    new_case = [''] * 7
 
     # Introduction
     print('\n\033[1m'+'WELCOME TO THE PLAYLIST GENERATOR. '+'\033[0m'+'\nPlease, answer to the following questions:')

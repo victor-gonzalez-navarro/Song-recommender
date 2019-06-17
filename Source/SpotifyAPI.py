@@ -8,8 +8,32 @@ def normalize(bins):
     return normalized
 
 
+def normalize_vars(vars, values):
+    normalized = []
+    for i, variable in enumerate(vars):
+        normalized.append(normalize_var(variable, values[i]))
+    return normalized
+
+
+def normalize_var(var, value):
+    diff = VAR_RANGES[var][1] - VAR_RANGES[var][0]
+    return (value - VAR_RANGES[var][0]) / diff
+
+
+def bin_for(variable, value):
+    step = BINS_STEPS[variable]
+    current = BINS_BEGIN[variable] + step
+    n_bin = 0
+
+    while value > current:
+        n_bin += 1
+        current += step
+
+    return min([n_bin, len(BINS[variable]) - 1])
+
+
 BINS = {
-    'acousticnes':      [3070, 825, 615, 510, 410, 365, 330, 320, 285, 275, 275, 270, 275, 275, 220, 250, 310, 315, 325, 450],
+    'acousticness':     [3070, 825, 615, 510, 410, 365, 330, 320, 285, 275, 275, 270, 275, 275, 220, 250, 310, 315, 325, 450],
     'danceability':     [15, 30, 75, 160, 185, 260, 370, 450, 600, 760, 950, 1035, 1040, 1060, 1020, 835, 640, 340, 150, 70],
     'energy':           [185, 155, 200, 225, 250, 305, 340, 395, 490, 550, 590, 695, 635, 750, 765, 800, 730, 720, 710, 540],
     'instrumentalness': [7650, 200, 95, 80, 80, 80, 80, 80, 80, 80, 80, 80, 80, 80, 120, 160, 235, 355, 430, 160],
@@ -23,8 +47,8 @@ BINS = {
 NORM_BINS = normalize(BINS)
 
 BINS_STEPS = {
-    'acousticnes':      0.05,
-    'danceability':     0.485,
+    'acousticness':     0.05,
+    'danceability':     0.0485,
     'energy':           0.05,
     'instrumentalness': 0.05,
     'liveness':         0.05,
@@ -35,7 +59,7 @@ BINS_STEPS = {
 }
 
 BINS_BEGIN = {
-    'acousticnes':      0,
+    'acousticness':     0,
     'danceability':     0,
     'energy':           0,
     'instrumentalness': 0,
@@ -45,3 +69,6 @@ BINS_BEGIN = {
     'valence':          0,
     'tempo':            0,
 }
+
+
+VAR_RANGES = {k:(BINS_BEGIN[k], BINS_BEGIN[k] + BINS_STEPS[k] * len(BINS[k])) for k in BINS.keys()}

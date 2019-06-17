@@ -3,13 +3,21 @@ from Source.node import Node
 from Source.preprocess import Preprocess
 from scipy.linalg import norm
 from sklearn.preprocessing import MinMaxScaler
-from Source.SpotifyAPI import BINS, NORM_BINS, BINS_BEGIN, BINS_STEPS
+from Source.SpotifyAPI import NORM_BINS, bin_for
+import matplotlib.pyplot as plt
+import scipy.stats as stats
+import math
+
+
+def sigmoid(x):
+    return 1 / (1 + math.exp(-x))
 
 
 class CaseBase:
 
     def __init__(self, x, num_class, attr_categ, songs_info, n_clusters=5):
         # Preprocess of the data to be stored in the Case Base
+        self.n_clusters = n_clusters
         self.num_class = num_class
         self.prep = Preprocess(attr_categ)
         self.attr_names, self.attr_vals, self.attr_types, self.sol_cols = self.prep.extract_attr_info(x, self.num_class)
@@ -27,6 +35,22 @@ class CaseBase:
                                                              # (+ leaf)
 
         self.make_tree(self.x, aux_x)
+
+    def retain(self, solution, new_case):
+        complete_case = new_case.tolist() + [val['mean'] for val in solution]
+        self.x = np.vstack((self.x, complete_case))
+
+        # For some unknown reason, means are saved as strings, so change them to float
+        for i in range(8, self.x.shape[1]):
+            self.x[-1, i] = float(self.x[-1, i])
+
+        # Rebuild the tree
+        aux_x, self.attr_vals = self.prep.fit_predict(self.x[:, :-self.num_class], n_clusters=self.n_clusters)
+        self.tree = None
+        self.feat_selected = np.zeros((self.x.shape[1], 1))
+        self.max_depth = aux_x.shape[1]
+        self.make_tree(self.x, aux_x)
+
 
     def get_tree_depth(self, tree=None, depth=0):
         if tree is None:
@@ -427,21 +451,78 @@ class CaseBase:
 
         return playlist
 
-    def revise(self, solution, new_case, automatic=True):
-        DANCEABILITY = 1
-        ENERGY = 2
-        LOUDNESS = 3
-        ACOUSTICNESS = 4
-        INSTRUMENTALNESS = 5
-        VALENCE = 6
-        TEMPO = 7
+    def revise(self, solution, new_case, plot=True, remove_worst=False):
+        variables = {
+            1: 'danceability',
+            2: 'energy',
+            3: 'loudness',
+            4: 'acousticness',
+            5: 'instrumentalness',
+            6: 'valence',
+            7: 'tempo',
+        }
 
-        if automatic:
-            for i, parameter in enumerate(solution):
-                print(parameter['mean'], i)
+        # Calculate for all
+        genres = ['Blues', 'Hard Rock', 'Latin', 'Reggae', 'Instrumental-Classical', 'Pop', 'Vocal', 'Rock', 'latin', 'Dance', 'Jazz', 'Reggaeton']
+        colors = ['deepskyblue', 'firebrick', 'royalblue', 'blue', 'm', 'indianred', 'olive', 'saddlebrown', 'greenyellow', 'darkgreen', 'gold', 'crimson']
+        means = []
+        stds = []
+        for i, genre in enumerate(genres):
+            x = []
+            y = []
+            for _, row in self.songs_info.iterrows():
+                if row['Genre'] in genre:
+                    parameters_mean = [float(row[var]) for var in variables.values()]
+                    total_p = 0
+                    for j, mean in enumerate(parameters_mean):
+                        variable = variables[j + 1]
+                        n_bin = bin_for(variable, mean)
+                        p = NORM_BINS[variable][n_bin]
+                        total_p += np.log10(p) if p > 0 else 0
+                    y.append(i)
+                    x.append(total_p)
 
-            print(len(solution))
-            print(solution)
-            print(self.get_n_cases())
+            mean = np.mean(x)
+            std = np.std(x)
+            means.append(mean)
+            stds.append(std)
+            if plot:
+                plt.scatter(x, y, c=colors[i], label=genre)
+                gx = np.linspace(-13, -6)
+                gy = stats.norm.pdf(gx, mean, std)
+                gy = gy / max(gy)
+                plt.plot(gx, gy * 0.4 + y[0], c=colors[i], alpha=0.5)
 
-        return
+        # Calculate for solution
+        total_p = 0
+        for i, parameter in enumerate(solution):
+            variable = variables[i + 1]
+            n_bin = bin_for(variable, parameter['mean'])
+            p = NORM_BINS[variable][n_bin]
+            total_p += np.log10(p) if p > 0 else 0
+
+        # User genres
+        user_genres = new_case[2].split(',')
+        mult_stds = []
+        for genre in user_genres:
+            index = genres.index(genre)
+            diff = abs(means[index] - total_p)
+            mult_stds.append(diff / stds[index])
+
+        # Calculate the goodness
+        probabilities = [2 - sigmoid(x) * 2 for x in mult_stds]
+        if len(probabilities) > 1 and remove_worst:
+            probabilities.remove(min(probabilities))
+
+        goodness = np.sum(probabilities) / len(probabilities)
+
+        if plot:
+            # Plot x
+            for genre in user_genres:
+                i = genres.index(genre)
+                plt.scatter(total_p, i, marker='x', color='r')
+            plt.xlabel('Log prob')
+            plt.yticks(ticks=[i for i in range(len(genres))], labels=genres)
+            plt.show()
+
+        return goodness
