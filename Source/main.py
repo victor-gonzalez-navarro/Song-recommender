@@ -10,7 +10,7 @@ DATA_PATH = '../Data/'
 TRAIN_PATH = DATA_PATH + 'songs_train.csv'
 TEST_PATH = DATA_PATH + 'songs_test.csv'
 SONGS_PATH = DATA_PATH + 'all_songs.csv'
-PLAYLIST_LENGTH = 5
+PLAYLIST_LENGTH = 2
 NUM_ATTRIB_SOLUTION = 7
 TYPE_ATTRIB_SOLUTION = ['num_continuous'] * NUM_ATTRIB_SOLUTION
 ATTR_CATEG = 2
@@ -20,7 +20,7 @@ def euclidean(a, b):
     return np.linalg.norm(np.array(a) - np.array(b))
 
 
-def run(cb, new_case, retain_when='good', retain_threshold=0.7, evaluation_auto=True, print_playlist=False, plot_retain=False):
+def run(cb, new_case, retain_when='good', retain_threshold=0.2, evaluation_auto=True, print_playlist=False, plot_retain=False):
     # [R1]: RETRIEVE ****
     retrieved_cases = cb.retrieve_v2(new_case)
 
@@ -118,8 +118,7 @@ def main(mode='ask', debug=False, evaluation_auto=True):
     pd.options.display.max_colwidth = 100
     example_case = [200, 'Male', "Instrumental-Classical,Dance,Blues", 'some concentration', 'really unhappy', 'calm', 'I keep the same', 'I keep the same']
 
-    if debug:
-        np.random.seed(3)
+    np.random.seed(3)
 
     # Read files
     data_test = pd.read_csv(TEST_PATH)
@@ -127,8 +126,6 @@ def main(mode='ask', debug=False, evaluation_auto=True):
     data_songs = pd.read_csv(SONGS_PATH)
     data_train = data_train.drop(data_train.columns[[8, 9, 10, 13, 15, 16, 19, 22, 23, 24, 25, 26]], axis=1)
     data_test = data_test.drop(data_test.columns[[8, 9, 10, 13, 15, 16, 19, 22, 23, 24, 25, 26]], axis=1)
-
-    # data_train = data_train.drop(data_train.index[list(range(40, 150))])
 
     if mode == 'example':
         cb = CaseBase(data_train, NUM_ATTRIB_SOLUTION, ATTR_CATEG, data_songs)
