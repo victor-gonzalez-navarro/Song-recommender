@@ -20,7 +20,7 @@ PLAYLIST_LENGTH  = 5    # x >= 1
 N_SIM            = 2    # x >= 1
 RETAIN_THRESHOLD = 0.6  # 0 < x < 1
 EVALUATION_AUTO  = True
-MODE             = 'ask'   # ['ask', 'tests', 'example']
+MODE             = 'example'   # ['ask', 'tests', 'example']
 RETAIN_WHEN      = 'good'  # [None, 'good', 'bad' (Do not use), 'all' (Do not use)]
 
 # Example instance
