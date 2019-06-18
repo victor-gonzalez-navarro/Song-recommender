@@ -143,4 +143,4 @@ def main(mode='ask', debug=False, evaluation_auto=True):
 
 
 if __name__ == '__main__':
-    main(mode='tests', evaluation_auto=True)
+    main(mode='example', evaluation_auto=True)

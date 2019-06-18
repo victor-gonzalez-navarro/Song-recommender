@@ -7,6 +7,9 @@ from Source.SpotifyAPI import NORM_BINS, bin_for
 import matplotlib.pyplot as plt
 import scipy.stats as stats
 import math
+import spotipy
+import spotipy.util as util
+import webbrowser
 
 
 def sigmoid(x):
@@ -314,7 +317,7 @@ class CaseBase:
         diction[6] = ['I get less happy', 'I keep the same', 'I get happier']
         diction[7] = ['I get more relaxed', 'I keep the same', 'I feel with more energy']
 
-        # Weighting the Previous attributes from 3 to 7
+        # Weighting the Previous attributes from 3 to 7 (more importance to the desired state and concentration)
         feat_weights = np.array([[0.2, 0.1, 0.1, 0.3, 0.3]])
 
         # Each attribute vote on the value to start from for each song feature
@@ -325,6 +328,8 @@ class CaseBase:
             ix = ix / len(diction[feat]) * 3
             inverse_ix = -ix % 2
             if feat in [3, 6, 7]:
+                # + Concentration, Desire of Happiness and Desire of Enery --> Start lower in danceability, energy,
+                # loudness, valence and Tempo and higher in acousticness and instrumentalness
                 feat_start[0].append(inverse_ix)
                 feat_start[1].append(inverse_ix)
                 feat_start[2].append(inverse_ix)
@@ -333,6 +338,8 @@ class CaseBase:
                 feat_start[5].append(inverse_ix)
                 feat_start[6].append(inverse_ix)
             elif feat in [4]:
+                # + Current Happiness --> Start higher in danceability, energy, loudness, valence and Tempo and lower in
+                # acousticness and instrumentalness
                 feat_start[0].append(ix)
                 feat_start[1].append(ix)
                 feat_start[2].append(ix)
@@ -341,6 +348,8 @@ class CaseBase:
                 feat_start[5].append(ix)
                 feat_start[6].append(ix)
             elif feat in [5]:
+                # + Current Energy --> Start higher in danceability, energy, loudness and Tempo and lower in
+                # valence, acousticness and instrumentalness
                 feat_start[0].append(ix)
                 feat_start[1].append(ix)
                 feat_start[2].append(ix)
@@ -445,9 +454,14 @@ class CaseBase:
             playlist.append(selected_song)
             search_directions = np.copy(new_search_directions)
 
+        song_ids = self.songs_info['id_Spotify'].ix[playlist].values
+
         # Replace the list of indexes with the list of info about the songs
         playlist = self.songs_info[['Song', 'Artist', 'Genre', 'Link_Spotify']].ix[playlist]
         playlist.reset_index(inplace=True, drop=True)
+
+        # Create playlist in Spotify
+        self.access_spotify_playlist(song_ids)
 
         return playlist
 
@@ -526,3 +540,46 @@ class CaseBase:
             plt.show()
 
         return goodness
+
+    @staticmethod
+    def access_spotify_playlist(song_ids):
+        username = '1296540692'
+
+        scope_c = 'playlist-modify-private,playlist-modify-public,playlist-read-private,playlist-read-collaborative'
+        client_id_c = 'a97f4ba3c1444f5183e769626937100f'
+        client_secret_c = '716b5ba0aaa04e75b3f764581e48cf7d'
+        redirect_uri_c = 'https://localhost:8080'
+
+        token = util.prompt_for_user_token(username, scope=scope_c, client_id=client_id_c,
+                                           client_secret=client_secret_c, redirect_uri=redirect_uri_c)
+
+        sp = spotipy.Spotify(auth=token)
+
+        # Create new playlist (if required)
+
+        playlist_name = 'moodifier_reco'
+
+        playlists = sp.user_playlists(username)
+
+        for i in playlists['items']:
+            if i['name'] == playlist_name:
+                playlist_id = i['id']
+
+        if playlist_id:
+            playlist_c = playlist_id
+        else:
+            new_playlist = sp.user_playlist_create(username, playlist_name, public=True)
+            playlist_c = new_playlist['id']
+
+        # Add new songs to playlist
+
+        tmp_song_ids = song_ids[0]
+
+        sp.user_playlist_add_tracks(user=username, playlist_id=playlist_c, tracks=tmp_song_ids)
+        sp.user_playlist_replace_tracks(username, playlist_c, song_ids)
+
+        # Open URL with playlist
+
+        url = 'https://open.spotify.com/playlist/7b5h0dzp7R45FQZSHDyrPD'
+
+        webbrowser.open(url)
