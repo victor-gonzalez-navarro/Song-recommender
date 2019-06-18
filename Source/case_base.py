@@ -1,9 +1,9 @@
 import numpy as np
-from Source.node import Node
-from Source.preprocess import Preprocess
+from Source.utils.node import Node
+from Source.utils.preprocess import Preprocess
 from scipy.linalg import norm
 from sklearn.preprocessing import MinMaxScaler
-from Source.SpotifyAPI import NORM_BINS, bin_for
+from Source.spotify_api import NORM_BINS, bin_for
 import matplotlib.pyplot as plt
 import scipy.stats as stats
 import math
@@ -37,6 +37,7 @@ class CaseBase:
         self.make_tree(self.x, aux_x)
 
     def retain(self, solution, new_case):
+        new_case = np.array(new_case)
         complete_case = new_case.tolist() + [val['mean'] for val in solution]
         self.x = np.vstack((self.x, complete_case))
 
@@ -451,7 +452,10 @@ class CaseBase:
 
         return playlist
 
-    def revise(self, solution, new_case, plot=True, remove_worst=False):
+    def revise(self, solution, new_case, evaluation_auto=True, plot=True, remove_worst=True):
+        if not evaluation_auto:
+            return 1.0 if input('Do you like this playlist? [yes|no]: ') == 'yes' else 0.0  # goodness
+
         variables = {
             1: 'danceability',
             2: 'energy',
@@ -471,7 +475,7 @@ class CaseBase:
             x = []
             y = []
             for _, row in self.songs_info.iterrows():
-                if row['Genre'] in genre:
+                if row['Genre'] == genre:
                     parameters_mean = [float(row[var]) for var in variables.values()]
                     total_p = 0
                     for j, mean in enumerate(parameters_mean):
@@ -488,7 +492,7 @@ class CaseBase:
             stds.append(std)
             if plot:
                 plt.scatter(x, y, c=colors[i], label=genre)
-                gx = np.linspace(-13, -6)
+                gx = np.linspace(-13, -5)
                 gy = stats.norm.pdf(gx, mean, std)
                 gy = gy / max(gy)
                 plt.plot(gx, gy * 0.4 + y[0], c=colors[i], alpha=0.5)
@@ -521,7 +525,7 @@ class CaseBase:
             for genre in user_genres:
                 i = genres.index(genre)
                 plt.scatter(total_p, i, marker='x', color='r')
-            plt.xlabel('Log prob')
+            plt.xlabel('Log10(p(song))')
             plt.yticks(ticks=[i for i in range(len(genres))], labels=genres)
             plt.show()
 

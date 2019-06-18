@@ -1,7 +1,7 @@
 import numpy as np
 
 
-def normalize(bins):
+def normalize_bins(bins):
     normalized = {}
     for k, v in bins.items():
         normalized[k] = np.array(v) / np.sum(v)
@@ -44,7 +44,7 @@ BINS = {
     'tempo':            [10, 0, 0, 10, 30, 165, 800, 1130, 1390, 1170, 1730, 1330, 795, 535, 535, 265, 90, 50, 10],
 }
 
-NORM_BINS = normalize(BINS)
+NORM_BINS = normalize_bins(BINS)
 
 BINS_STEPS = {
     'acousticness':     0.05,

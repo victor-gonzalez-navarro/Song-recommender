@@ -1,8 +1,37 @@
 import numpy as np
+from Source.spotify_api import normalize_vars
+
+
+def euclidean(a, b):
+    return np.linalg.norm(np.array(a) - np.array(b))
+
+
+def find_song_properties(data_songs, song, artist, genre, variables):
+    for _, row in data_songs.iterrows():
+        if row['Song'] == song and row['Artist'] == artist and row['Genre'] == genre:
+            data = []
+            for variable in variables:
+                data.append(row[variable])
+            return data
+    return None
+
+
+def distances_between_all_songs(data_test, euclidean_max):
+    variables = list(data_test)[8:]
+
+    distances = []
+    for row1 in range(len(data_test.index)):
+        for row2 in range(row1 + 1, len(data_test.index)):
+            song1 = normalize_vars(variables, data_test.loc[row1, :].values[8:])
+            song2 = normalize_vars(variables, data_test.loc[row2, :].values[8:])
+            distances.append(euclidean(song1, song2))
+
+    similarities = 1 - np.array(distances) / euclidean_max
+    print(np.mean(similarities))
 
 
 def menu():
-    new_case = [''] * 7
+    new_case = [None] * 8
 
     # Introduction
     print('\n\033[1m'+'WELCOME TO THE PLAYLIST GENERATOR. '+'\033[0m'+'\nPlease, answer to the following questions:')
@@ -24,7 +53,7 @@ def menu():
     var2.append(int(input('   \033[1mIntroduce the numbers of your second option:\033[0m ')))
     var2.append(int(input('   \033[1mIntroduce the numbers of your third option:\033[0m ')))
     var2 = np.sort(var2)
-    string_list = ['Blues','Dance', 'Hard Rock', 'Intrumental-Classical', 'Jazz', 'Latin', 'Pop', 'Reggae',
+    string_list = ['Blues','Dance', 'Hard Rock', 'Instrumental-Classical', 'Jazz', 'Latin', 'Pop', 'Reggae',
                    'Reggaeton', 'Rock', 'Vocal']
     new_case[2] = string_list[var2[0]]+','+string_list[var2[1]]+','+string_list[var2[2]]
 
