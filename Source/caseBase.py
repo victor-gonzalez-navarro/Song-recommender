@@ -454,7 +454,7 @@ class CaseBase:
             playlist.append(selected_song)
             search_directions = np.copy(new_search_directions)
 
-        song_ids = self.songs_info['id_Spotify'].ix[playlist].values
+        song_ids = list(self.songs_info['id_Spotify'].ix[playlist])
 
         # Replace the list of indexes with the list of info about the songs
         playlist = self.songs_info[['Song', 'Artist', 'Genre', 'Link_Spotify']].ix[playlist]
@@ -572,14 +572,11 @@ class CaseBase:
             playlist_c = new_playlist['id']
 
         # Add new songs to playlist
-
-        tmp_song_ids = song_ids[0]
-
-        sp.user_playlist_add_tracks(user=username, playlist_id=playlist_c, tracks=tmp_song_ids)
+        # sp.user_playlist_add_tracks(user=username, playlist_id=playlist_c, tracks=tmp_song_ids)
         sp.user_playlist_replace_tracks(username, playlist_c, song_ids)
 
         # Open URL with playlist
 
-        url = 'https://open.spotify.com/playlist/7b5h0dzp7R45FQZSHDyrPD'
+        url = 'https://open.spotify.com/playlist/' + playlist_c
 
         webbrowser.open(url)
